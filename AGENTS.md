@@ -8,3 +8,4 @@
 - **Commits**: Use [Conventional Commits](https://www.conventionalcommits.org/).
 - **Testing**: Use `cargo test` to verify changes.
 - **Entry point**: The primary logic resides in `src/lib.rs`.
+- **Pre-commit hooks**: NEVER use `git commit --no-verify` to bypass pre-commit hooks. Fix issues instead.

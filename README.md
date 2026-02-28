@@ -102,8 +102,6 @@ mise generate git-pre-commit  # Install the hook
 
 The hook runs: `fmt` → `clippy` → `test`
 
-Skip temporarily: `git commit --no-verify`
-
 ### CI
 
 GitHub Actions runs the same checks on push/PR:
