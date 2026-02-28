@@ -76,6 +76,36 @@ let manager = BrowserManager::new(
 
 See [AGENTS.md](./AGENTS.md) for development guidelines.
 
+## Development
+
+### Prerequisites
+
+- Rust toolchain (latest stable)
+- [mise](https://mise.jdx.dev/) for task management and git hooks
+
+### Running Tasks
+
+```bash
+mise run test          # Run tests
+mise run clippy        # Run clippy with auto-fix
+mise run fmt           # Format code
+mise run lint          # Run all linters with auto-fix
+mise run check         # Run cargo check
+mise run ci            # Run CI checks (no auto-fix, for GitHub Actions)
+```
+
+### Git Hooks
+
+Pre-commit hook automatically fixes formatting and clippy issues:
+
+```bash
+mise generate git-pre-commit  # Install the hook
+```
+
+The hook runs: `fmt` → `clippy` → `test`
+
+Skip temporarily: `git commit --no-verify`
+
 ## License
 
 MIT
