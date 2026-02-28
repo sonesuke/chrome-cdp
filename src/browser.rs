@@ -170,7 +170,9 @@ impl CdpBrowser {
         let process = match Arc::try_unwrap(process) {
             Ok(mutex) => mutex.into_inner().unwrap(),
             Err(_) => {
-                return Err(Error::Browser("Failed to acquire process ownership".to_string()))
+                return Err(Error::Browser(
+                    "Failed to acquire process ownership".to_string(),
+                ))
             }
         };
 
@@ -248,11 +250,10 @@ impl CdpBrowser {
         let url = format!("http://127.0.0.1:{}/json/new", self.port);
         let client = reqwest::Client::new();
 
-        let response = client
-            .put(&url)
-            .send()
-            .await
-            .map_err(|e| Error::Http(format!("Failed to create new page via {}: {}", url, e)))?;
+        let response =
+            client.put(&url).send().await.map_err(|e| {
+                Error::Http(format!("Failed to create new page via {}: {}", url, e))
+            })?;
 
         let status = response.status();
         let body = response
@@ -366,13 +367,7 @@ impl BrowserManager {
         args.extend(self.chrome_args.clone());
 
         let browser = Arc::new(
-            CdpBrowser::launch(
-                self.browser_path.clone(),
-                args,
-                self.headless,
-                self.debug,
-            )
-            .await?,
+            CdpBrowser::launch(self.browser_path.clone(), args, self.headless, self.debug).await?,
         );
         s.browser = Some(Arc::clone(&browser));
 
