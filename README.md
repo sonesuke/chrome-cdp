@@ -101,7 +101,7 @@ Install pre-commit hook:
 mise generate git-pre-commit --write --task=pre-commit
 ```
 
-The `pre-commit` task runs: `fmt` → `clippy` → `test`
+The `pre-commit` task depends on: `fmt` → `clippy` → `test`
 
 ### CI
 

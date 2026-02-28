@@ -24,4 +24,4 @@ run = "cargo check"
 
 [tasks.pre-commit]
 description = "Run pre-commit checks with auto-fix"
-run = "cargo fmt && cargo clippy --fix --allow-dirty --allow-staged -- -D warnings && cargo test"
+depends = ["fmt", "clippy", "test"]
