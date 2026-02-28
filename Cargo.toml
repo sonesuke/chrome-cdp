@@ -1,0 +1,8 @@
+[package]
+name = "chrome-cdp"
+version = "0.1.0"
+edition = "2024"
+authors = ["sonesuke"]
+description = "A Rust library for Chrome DevTools Protocol"
+
+[dependencies]
