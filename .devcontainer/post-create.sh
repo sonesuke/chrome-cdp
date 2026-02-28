@@ -45,8 +45,16 @@ EOF
 
     echo "[Devcontainer Setup] Authenticating claude..."
     if [ -n "$Z_AI_API_KEY" ]; then
-        npx -y @z_ai/coding-helper auth glm_coding_plan_global "$Z_AI_API_KEY"
-        npx -y @z_ai/coding-helper auth reload claude
+        mkdir -p "$HOME/.claude"
+        cat > "$HOME/.claude/settings.json" <<EOF
+{
+    "env": {
+        "ANTHROPIC_AUTH_TOKEN": "$Z_AI_API_KEY",
+        "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+        "API_TIMEOUT_MS": "3000000"
+    }
+}
+EOF
     fi
 
     echo "[Devcontainer Setup] Complete!"
