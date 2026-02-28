@@ -76,6 +76,27 @@ let manager = BrowserManager::new(
 
 See [AGENTS.md](./AGENTS.md) for development guidelines.
 
+## Development
+
+### Prerequisites
+
+- Rust toolchain (latest stable)
+- [mise](https://mise.jdx.dev/) for task management
+
+### Running Tasks
+
+```bash
+mise run test          # Run tests
+mise run clippy        # Run linter
+mise run clippy-fix    # Run clippy with auto-fix
+mise run fmt           # Format code
+mise run fmt-check     # Check code formatting
+mise run lint          # Run all linters (fmt-check + clippy)
+mise run check         # Run cargo check
+mise run pre-commit    # Run pre-commit checks (fmt + clippy + test)
+mise run ci            # Run CI checks (fmt-check + clippy + test)
+```
+
 ## License
 
 MIT
