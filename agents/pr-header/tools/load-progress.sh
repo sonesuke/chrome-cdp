@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PROGRESS_FILE="$REPO_ROOT/agents/pr-healer/progress.jsonl"
+# Get main worktree path (works from any worktree)
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir)
+MAIN_WORKTREE=$(dirname "$GIT_COMMON_DIR")
+PROGRESS_FILE="$MAIN_WORKTREE/agents/pr-header/progress.log"
 
 if [[ ! -f "$PROGRESS_FILE" ]]; then
     echo "📋 No progress file found - this is a fresh start"
