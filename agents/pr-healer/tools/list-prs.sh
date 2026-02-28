@@ -16,9 +16,9 @@ gh pr list \
         reviewDecision: (.reviewDecision // "NONE"),
         mergeStateStatus: (.mergeStateStatus // "UNKNOWN"),
         ciStatus: ([.statusCheckRollup[]?.conclusion] | join(",")),
-        hasCiFailure: ([.statusCheckRollup[]?.conclusion] | contains("FAILURE")),
+        hasCiFailure: ([.statusCheckRollup[]?.conclusion] | any(. == "FAILURE")),
         needsAttention: (
-            ([.statusCheckRollup[]?.conclusion] | contains("FAILURE")) or
+            ([.statusCheckRollup[]?.conclusion] | any(. == "FAILURE")) or
             (.reviewDecision == "CHANGES_REQUESTED") or
             (.reviewDecision == "NEEDS_WORK") or
             (.mergeStateStatus == "BEHIND")
