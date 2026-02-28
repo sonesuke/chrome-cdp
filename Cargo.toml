@@ -14,3 +14,10 @@ tokio-tungstenite = "0.26"
 reqwest = { version = "0.12", features = ["json"] }
 uuid = { version = "1.0", features = ["v4"] }
 thiserror = "2.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = []
+integration-tests = []

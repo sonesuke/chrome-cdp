@@ -30,6 +30,13 @@ EOF
     echo 'alias claude="claude --allow-dangerously-skip-permissions"' >> $HOME/.bashrc
     echo 'alias claude="claude --allow-dangerously-skip-permissions"' >> $HOME/.zshrc
 
+    # Install mise as vscode user
+    if ! command -v mise >/dev/null 2>&1; then
+        echo "[Devcontainer Setup] Installing mise..."
+        curl https://mise.run | sh
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
+
     echo "[Devcontainer Setup] Configuring mise..."
     echo 'eval "$(mise activate bash)"' >> $HOME/.bashrc
     echo 'eval "$(mise activate zsh)"' >> $HOME/.zshrc
@@ -39,6 +46,9 @@ EOF
         echo "[Devcontainer Setup] Installing tools with mise..."
         mise trust
         mise install
+
+        echo "[Devcontainer Setup] Setting up git pre-commit hook..."
+        mise generate git-pre-commit --write --task=pre-commit
     else
         echo "[Devcontainer Setup] WARNING: mise is not installed."
     fi
