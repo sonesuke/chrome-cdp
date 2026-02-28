@@ -3,7 +3,8 @@
 ## Project Overview
 `chrome-cdp` is a Rust library designed to interact with Chrome via the DevTools Protocol (CDP).
 
-## Development Guide
-- Use `cargo test` to run tests.
-- Follow conventional commits for commit messages.
-- The primary logic resides in `src/lib.rs`.
+## Development Rules
+- **Language**: All code, comments, documentation, commit messages, and PR descriptions MUST be in English.
+- **Commits**: Use [Conventional Commits](https://www.conventionalcommits.org/).
+- **Testing**: Use `cargo test` to verify changes.
+- **Entry point**: The primary logic resides in `src/lib.rs`.
