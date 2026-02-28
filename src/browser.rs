@@ -161,7 +161,7 @@ impl CdpBrowser {
         .await
         .map_err(|e| Error::Browser(format!("Task failed: {}", e)))??;
 
-        let ws_url =
+        let _ws_url =
             Self::get_ws_url_with_retry(discovered_port, 10, Duration::from_millis(500)).await?;
 
         // Unwrap the Arc<Mutex<>> to get the process

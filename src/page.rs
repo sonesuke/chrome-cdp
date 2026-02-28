@@ -131,7 +131,10 @@ mod tests {
             selector.replace('"', "\\\"")
         );
         // The replace function escapes the quotes with backslash
-        assert_eq!(script, "!!document.querySelector(\"div[data-attr=\\\"test\\\"]\")");
+        assert_eq!(
+            script,
+            "!!document.querySelector(\"div[data-attr=\\\"test\\\"]\")"
+        );
     }
 
     #[test]
@@ -217,8 +220,14 @@ mod tests {
             exception["exceptionDetails"]["exception"]["description"].as_str(),
             Some("ReferenceError: x is not defined")
         );
-        assert_eq!(exception["exceptionDetails"]["columnNumber"].as_i64(), Some(10));
-        assert_eq!(exception["exceptionDetails"]["lineNumber"].as_i64(), Some(5));
+        assert_eq!(
+            exception["exceptionDetails"]["columnNumber"].as_i64(),
+            Some(10)
+        );
+        assert_eq!(
+            exception["exceptionDetails"]["lineNumber"].as_i64(),
+            Some(5)
+        );
     }
 
     #[test]

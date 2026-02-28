@@ -1,6 +1,4 @@
 [tools]
-cargo = "latest"
-rust = "latest"
 
 [tasks.test]
 description = "Run tests"

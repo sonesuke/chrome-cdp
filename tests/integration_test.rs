@@ -47,7 +47,9 @@ mod chrome_tests {
         let page = CdpPage::new(&ws_url).await.unwrap();
 
         // Navigate to a data URL (no network needed)
-        page.goto("data:text/html,<html><body>Hello</body></html>").await.unwrap();
+        page.goto("data:text/html,<html><body>Hello</body></html>")
+            .await
+            .unwrap();
 
         // Evaluate JavaScript
         let result = page.evaluate("document.body.innerText").await.unwrap();
@@ -64,7 +66,11 @@ mod chrome_tests {
         let ws_url = browser.new_page().await.unwrap();
         let page = CdpPage::new(&ws_url).await.unwrap();
 
-        page.goto("data:text/html,<html><head><title>Test</title></head><body>Content</body></html>").await.unwrap();
+        page.goto(
+            "data:text/html,<html><head><title>Test</title></head><body>Content</body></html>",
+        )
+        .await
+        .unwrap();
 
         let html = page.get_html().await.unwrap();
         assert!(html.contains("<html>"));
@@ -81,7 +87,9 @@ mod chrome_tests {
         let ws_url = browser.new_page().await.unwrap();
         let page = CdpPage::new(&ws_url).await.unwrap();
 
-        page.goto("data:text/html,<html><body></body></html>").await.unwrap();
+        page.goto("data:text/html,<html><body></body></html>")
+            .await
+            .unwrap();
 
         // Wait for non-existent element - should timeout and return false
         let found = page.wait_for_element("#non-existent", 2).await.unwrap();
@@ -98,7 +106,9 @@ mod chrome_tests {
         let ws_url = browser.new_page().await.unwrap();
         let page = CdpPage::new(&ws_url).await.unwrap();
 
-        page.goto("data:text/html,<html><body><div id='target'>Found</div></body></html>").await.unwrap();
+        page.goto("data:text/html,<html><body><div id='target'>Found</div></body></html>")
+            .await
+            .unwrap();
 
         // Wait for existing element - should return true
         let found = page.wait_for_element("#target", 2).await.unwrap();
@@ -115,7 +125,9 @@ mod chrome_tests {
         let ws_url = browser.new_page().await.unwrap();
         let page = CdpPage::new(&ws_url).await.unwrap();
 
-        page.goto("data:text/html,<html><body></body></html>").await.unwrap();
+        page.goto("data:text/html,<html><body></body></html>")
+            .await
+            .unwrap();
 
         // Evaluate invalid JavaScript - should return an error
         let result = page.evaluate("throw new Error('test error')").await;
@@ -132,13 +144,20 @@ mod chrome_tests {
         let ws_url = browser.new_page().await.unwrap();
         let page = CdpPage::new(&ws_url).await.unwrap();
 
-        page.goto("data:text/html,<html><body></body></html>").await.unwrap();
+        page.goto("data:text/html,<html><body></body></html>")
+            .await
+            .unwrap();
 
         // Create element via JavaScript
-        page.evaluate("document.body.appendChild(document.createElement('div'))").await.unwrap();
+        page.evaluate("document.body.appendChild(document.createElement('div'))")
+            .await
+            .unwrap();
 
         // Verify element exists
-        let result = page.evaluate("document.querySelector('div') !== null").await.unwrap();
+        let result = page
+            .evaluate("document.querySelector('div') !== null")
+            .await
+            .unwrap();
         assert_eq!(result.as_bool(), Some(true));
 
         page.close().await.unwrap();

@@ -158,9 +158,7 @@ mod tests {
 
         for _ in 0..10 {
             let conn_clone = conn.clone();
-            handles.push(tokio::spawn(async move {
-                conn_clone.get_next_id().await
-            }));
+            handles.push(tokio::spawn(async move { conn_clone.get_next_id().await }));
         }
 
         let mut ids = vec![];
