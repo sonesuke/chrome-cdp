@@ -1,0 +1,43 @@
+[tools]
+cargo = "latest"
+rust = "latest"
+
+[tasks.test]
+description = "Run tests"
+run = "cargo test"
+
+[tasks.test-coverage]
+description = "Run tests with coverage"
+run = "cargo llvm-cov --html"
+
+[tasks.clippy]
+description = "Run clippy with auto-fix"
+run = "cargo clippy --fix --allow-dirty --allow-staged -- -D warnings"
+
+[tasks.format]
+description = "Format code"
+run = "cargo fmt"
+
+[tasks.format-check]
+description = "Check code formatting"
+run = "cargo fmt -- --check"
+
+[tasks.lint]
+description = "Run all linters with auto-fix"
+run = "cargo fmt && cargo clippy --fix --allow-dirty --allow-staged -- -D warnings"
+
+[tasks.check]
+description = "Run cargo check"
+run = "cargo check"
+
+[tasks.ci]
+description = "Run CI checks (no auto-fix)"
+run = "cargo fmt --check && cargo clippy -- -D warnings && cargo test"
+
+# Git hooks - pre-commit runs auto-fix commands
+[git.hooks.pre-commit]
+run = [
+  "format",
+  "clippy",
+  "test"
+]
