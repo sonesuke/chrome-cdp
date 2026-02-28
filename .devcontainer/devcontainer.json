@@ -1,5 +1,5 @@
 {
-	"name": "Arxiv-CLI Dev",
+	"name": "Chrome-CDP Dev",
 	"build": {
 		"dockerfile": "Dockerfile",
 		"context": ".."
