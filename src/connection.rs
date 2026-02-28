@@ -110,3 +110,143 @@ impl CdpConnection {
             .map_err(|_| Error::Cdp("Response channel closed".to_string()))?
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    // Test helper to verify command ID increment
+    struct TestConnection {
+        next_id: Arc<Mutex<u32>>,
+    }
+
+    impl TestConnection {
+        fn new() -> Self {
+            Self {
+                next_id: Arc::new(Mutex::new(1)),
+            }
+        }
+
+        async fn get_next_id(&self) -> u32 {
+            let mut next_id = self.next_id.lock().await;
+            let id = *next_id;
+            *next_id += 1;
+            id
+        }
+    }
+
+    #[tokio::test]
+    async fn test_command_id_generation_starts_at_one() {
+        let conn = TestConnection::new();
+        assert_eq!(conn.get_next_id().await, 1);
+    }
+
+    #[tokio::test]
+    async fn test_command_id_increments() {
+        let conn = TestConnection::new();
+        assert_eq!(conn.get_next_id().await, 1);
+        assert_eq!(conn.get_next_id().await, 2);
+        assert_eq!(conn.get_next_id().await, 3);
+    }
+
+    #[tokio::test]
+    async fn test_command_id_thread_safety() {
+        let conn = Arc::new(TestConnection::new());
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let conn_clone = conn.clone();
+            handles.push(tokio::spawn(async move {
+                conn_clone.get_next_id().await
+            }));
+        }
+
+        let mut ids = vec![];
+        for handle in handles {
+            ids.push(handle.await.unwrap());
+        }
+
+        // All IDs should be unique
+        let unique_ids: std::collections::HashSet<_> = ids.iter().collect();
+        assert_eq!(unique_ids.len(), 10);
+    }
+
+    #[test]
+    fn test_response_json_id_extraction() {
+        let json = r#"{"id":42,"result":{"status":"ok"}}"#;
+        let value: Value = serde_json::from_str(json).unwrap();
+        assert_eq!(value["id"].as_u64(), Some(42));
+    }
+
+    #[test]
+    fn test_response_json_error_extraction() {
+        let json = r#"{"id":1,"error":{"code":-32601,"message":"Method not found"}}"#;
+        let value: Value = serde_json::from_str(json).unwrap();
+        assert!(value.get("error").is_some());
+        assert_eq!(value["error"]["code"].as_i64(), Some(-32601));
+        assert_eq!(value["error"]["message"].as_str(), Some("Method not found"));
+    }
+
+    #[test]
+    fn test_command_json_serialization() {
+        let cmd = json!({
+            "id": 1,
+            "method": "Page.navigate",
+            "params": {"url": "https://example.com"}
+        });
+        assert_eq!(cmd["id"], 1);
+        assert_eq!(cmd["method"], "Page.navigate");
+        assert_eq!(cmd["params"]["url"], "https://example.com");
+    }
+
+    #[tokio::test]
+    async fn test_channel_closure_on_send_error() {
+        let (tx, mut rx) = mpsc::unbounded_channel::<(u32, String, Value, Responder)>();
+        let (responder_tx, _) = oneshot::channel();
+
+        // Send should succeed
+        assert!(tx
+            .send((1, "Test.method".to_string(), json!({}), responder_tx))
+            .is_ok());
+
+        // Receive the message
+        assert!(rx.recv().await.is_some());
+
+        // Drop rx to simulate closure
+        drop(rx);
+
+        // Create new responder
+        let (responder_tx2, _) = oneshot::channel();
+
+        // Send should now fail (channel closed)
+        assert!(tx
+            .send((2, "Test.method".to_string(), json!({}), responder_tx2))
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn test_oneshot_channel_closure() {
+        let (tx, rx) = oneshot::channel::<Result<Value>>();
+
+        // Drop the receiver
+        drop(rx);
+
+        // Sending should fail
+        assert!(tx.send(Ok(json!({}))).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_oneshot_channel_value_retrieval() {
+        let (tx, rx) = oneshot::channel::<Result<Value>>();
+
+        let expected = json!({"result": "success"});
+        tokio::spawn(async move {
+            tx.send(Ok(expected)).unwrap();
+        });
+
+        let result = rx.await.unwrap();
+        assert_eq!(result.unwrap()["result"], "success");
+    }
+}

@@ -17,6 +17,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     vim \
     jq \
     sudo \
+    chromium \
+    lcov \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install mise

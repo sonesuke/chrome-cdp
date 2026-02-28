@@ -8,7 +8,11 @@ run = "cargo test"
 
 [tasks.test-coverage]
 description = "Run tests with coverage"
-run = "cargo llvm-cov --html"
+run = "cargo llvm-cov --features integration-tests"
+
+[tasks.test-coverage-lcov]
+description = "Generate lcov.info"
+run = "cargo llvm-cov --lcov --output-path lcov.info --features integration-tests"
 
 [tasks.clippy]
 description = "Run clippy with auto-fix"
