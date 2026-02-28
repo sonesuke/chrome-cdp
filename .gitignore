@@ -1,1 +1,6 @@
 /target
+/lcov.info
+.claude/worktrees/
+
+# PR-Healer runtime state
+agents/pr-healer/progress.jsonl
