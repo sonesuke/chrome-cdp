@@ -42,7 +42,10 @@ impl CdpPage {
         let start = std::time::Instant::now();
 
         while start.elapsed().as_secs() < timeout_secs {
-            let script = format!("!!document.querySelector(\"{}\")", selector.replace('"', "\\\""));
+            let script = format!(
+                "!!document.querySelector(\"{}\")",
+                selector.replace('"', "\\\"")
+            );
 
             let result = self.evaluate(&script).await?;
             if result.as_bool().unwrap_or(false) {
