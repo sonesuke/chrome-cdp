@@ -76,12 +76,15 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn test_result_type_alias_ok() {
         let result: Result<i32> = Ok(42);
+        assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);
     }
 
     #[test]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn test_result_type_alias_err() {
         let result: Result<i32> = Err(Error::Browser("failed".to_string()));
         assert!(result.is_err());

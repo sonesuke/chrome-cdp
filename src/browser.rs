@@ -422,8 +422,8 @@ mod tests {
     async fn test_browser_manager_with_custom_args() {
         let custom_args = vec!["--disable-gpu".to_string(), "--no-sandbox".to_string()];
         let manager = BrowserManager::new(None, false, true, custom_args);
-        assert_eq!(manager.headless, false);
-        assert_eq!(manager.debug, true);
+        assert!(!manager.headless);
+        assert!(manager.debug);
         assert_eq!(manager.chrome_args.len(), 2);
         assert_eq!(manager.chrome_args[0], "--disable-gpu");
         assert_eq!(manager.chrome_args[1], "--no-sandbox");
