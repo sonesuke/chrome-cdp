@@ -311,6 +311,70 @@ pub struct BrowserManager {
     state: Arc<Mutex<BrowserState>>,
 }
 
+impl BrowserManager {
+    /// Create a new browser manager
+    pub fn new(
+        browser_path: Option<PathBuf>,
+        headless: bool,
+        debug: bool,
+        chrome_args: Vec<String>,
+    ) -> Self {
+        let state = Arc::new(Mutex::new(BrowserState {
+            browser: None,
+            last_used: Instant::now(),
+        }));
+
+        // Spawn the inactivity monitor task
+        let state_clone = state.clone();
+        tokio::spawn(async move {
+            loop {
+                sleep(Duration::from_secs(60)).await;
+                let mut s = state_clone.lock().await;
+                if s.browser.is_some() && s.last_used.elapsed() > Duration::from_secs(5 * 60) {
+                    s.browser = None; // Drops Arc<CdpBrowser>, which triggers process kill
+                }
+            }
+        });
+
+        Self {
+            browser_path,
+            headless,
+            debug,
+            chrome_args,
+            state,
+        }
+    }
+
+    /// Get or create a browser instance
+    pub async fn get_browser(&self) -> Result<Arc<CdpBrowser>> {
+        let mut s = self.state.lock().await;
+        s.last_used = Instant::now();
+
+        if let Some(browser) = &s.browser {
+            return Ok(Arc::clone(browser));
+        }
+
+        let mut args = vec!["--disable-blink-features=AutomationControlled".to_string()];
+
+        // In CI environments, automatically add sandbox-disabling flags
+        if std::env::var("CI").is_ok() {
+            args.push("--disable-gpu".to_string());
+            args.push("--no-sandbox".to_string());
+            args.push("--disable-setuid-sandbox".to_string());
+        }
+
+        // Add custom Chrome args
+        args.extend(self.chrome_args.clone());
+
+        let browser = Arc::new(
+            CdpBrowser::launch(self.browser_path.clone(), args, self.headless, self.debug).await?,
+        );
+        s.browser = Some(Arc::clone(&browser));
+
+        Ok(browser)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -412,8 +476,8 @@ mod tests {
     #[tokio::test]
     async fn test_browser_manager_creation() {
         let manager = BrowserManager::new(None, true, false, vec![]);
-        assert_eq!(manager.headless, true);
-        assert_eq!(manager.debug, false);
+        assert!(manager.headless);
+        assert!(!manager.debug);
         assert!(manager.chrome_args.is_empty());
         assert!(manager.browser_path.is_none());
     }
@@ -514,69 +578,5 @@ mod tests {
         let body = r#"invalid json"#;
         let result: std::result::Result<Value, serde_json::Error> = serde_json::from_str(body);
         assert!(result.is_err());
-    }
-}
-
-impl BrowserManager {
-    /// Create a new browser manager
-    pub fn new(
-        browser_path: Option<PathBuf>,
-        headless: bool,
-        debug: bool,
-        chrome_args: Vec<String>,
-    ) -> Self {
-        let state = Arc::new(Mutex::new(BrowserState {
-            browser: None,
-            last_used: Instant::now(),
-        }));
-
-        // Spawn the inactivity monitor task
-        let state_clone = state.clone();
-        tokio::spawn(async move {
-            loop {
-                sleep(Duration::from_secs(60)).await;
-                let mut s = state_clone.lock().await;
-                if s.browser.is_some() && s.last_used.elapsed() > Duration::from_secs(5 * 60) {
-                    s.browser = None; // Drops Arc<CdpBrowser>, which triggers process kill
-                }
-            }
-        });
-
-        Self {
-            browser_path,
-            headless,
-            debug,
-            chrome_args,
-            state,
-        }
-    }
-
-    /// Get or create a browser instance
-    pub async fn get_browser(&self) -> Result<Arc<CdpBrowser>> {
-        let mut s = self.state.lock().await;
-        s.last_used = Instant::now();
-
-        if let Some(browser) = &s.browser {
-            return Ok(Arc::clone(browser));
-        }
-
-        let mut args = vec!["--disable-blink-features=AutomationControlled".to_string()];
-
-        // In CI environments, automatically add sandbox-disabling flags
-        if std::env::var("CI").is_ok() {
-            args.push("--disable-gpu".to_string());
-            args.push("--no-sandbox".to_string());
-            args.push("--disable-setuid-sandbox".to_string());
-        }
-
-        // Add custom Chrome args
-        args.extend(self.chrome_args.clone());
-
-        let browser = Arc::new(
-            CdpBrowser::launch(self.browser_path.clone(), args, self.headless, self.debug).await?,
-        );
-        s.browser = Some(Arc::clone(&browser));
-
-        Ok(browser)
     }
 }
