@@ -5,6 +5,7 @@ use futures::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
@@ -14,11 +15,14 @@ type Responder = oneshot::Sender<Result<Value>>;
 pub struct CdpConnection {
     command_tx: mpsc::UnboundedSender<(u32, String, Value, Responder)>,
     next_id: Arc<Mutex<u32>>,
+    command_timeout: Duration,
 }
 
 impl CdpConnection {
     /// Connect to Chrome DevTools Protocol via WebSocket
-    pub async fn connect(ws_url: &str) -> Result<Self> {
+    ///
+    /// `command_timeout` is the maximum duration to wait for each CDP command response.
+    pub async fn connect(ws_url: &str, command_timeout: Duration) -> Result<Self> {
         let (ws_stream, _) = connect_async(ws_url)
             .await
             .map_err(|e| Error::WebSocket(format!("Failed to connect to {}: {}", ws_url, e)))?;
@@ -89,6 +93,7 @@ impl CdpConnection {
         Ok(Self {
             command_tx,
             next_id: Arc::new(Mutex::new(1)),
+            command_timeout,
         })
     }
 
@@ -106,7 +111,14 @@ impl CdpConnection {
             .send((id, method.to_string(), params, tx))
             .map_err(|_| Error::Cdp("Failed to send command to channel".to_string()))?;
 
-        rx.await
+        tokio::time::timeout(self.command_timeout, rx)
+            .await
+            .map_err(|_| {
+                Error::Cdp(format!(
+                    "CDP command {} timed out after {:?}",
+                    method, self.command_timeout
+                ))
+            })?
             .map_err(|_| Error::Cdp("Response channel closed".to_string()))?
     }
 }
