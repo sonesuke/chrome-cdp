@@ -66,9 +66,13 @@ impl CdpPage {
                 selector.replace('"', "\\\"")
             );
 
-            let result = self.evaluate(&script).await?;
-            if result.as_bool().unwrap_or(false) {
-                return Ok(true);
+            match self.evaluate(&script).await {
+                Ok(result) if result.as_bool().unwrap_or(false) => return Ok(true),
+                Ok(_) => {}
+                Err(_) => {
+                    // Timeout or JS error during polling - just continue
+                    // Don't propagate errors for polling checks
+                }
             }
 
             sleep(Duration::from_millis(500)).await;
