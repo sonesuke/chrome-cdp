@@ -12,8 +12,10 @@ pub struct CdpPage {
 
 impl CdpPage {
     /// Create a new page with the given connection
-    pub async fn new(ws_url: &str) -> Result<Self> {
-        let connection = CdpConnection::connect(ws_url).await?;
+    ///
+    /// `command_timeout` is the maximum duration to wait for each CDP command response.
+    pub async fn new(ws_url: &str, command_timeout: Duration) -> Result<Self> {
+        let connection = CdpConnection::connect(ws_url, command_timeout).await?;
 
         // Enable necessary domains
         connection
