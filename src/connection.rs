@@ -61,6 +61,7 @@ impl CdpConnection {
                             // Handle response
                             if let Some(id) = v["id"].as_u64() {
                                 let id = id as u32;
+                                eprintln!("[CDP] Received response for id={}, keys: {:?}", id, v.as_object().map(|o| o.keys().collect::<Vec<_>>()));
                                 let responder = pending.lock().await.remove(&id);
                                 if let Some(responder) = responder {
                                     if let Some(error) = v.get("error") {
@@ -73,11 +74,18 @@ impl CdpConnection {
                                             message
                                         ))));
                                     } else if let Some(result) = v.get("result") {
+                                        eprintln!("[CDP] result keys: {:?}", result.as_object().map(|o| o.keys().collect::<Vec<_>>()));
                                         let _ = responder.send(Ok(result.clone()));
+                                    } else {
+                                        eprintln!("[CDP] No 'result' or 'error' in response id={}", id);
                                     }
+                                } else {
+                                    eprintln!("[CDP] No pending responder for id={}", id);
                                 }
+                            } else {
+                                // Event or unknown message
+                                eprintln!("[CDP] Event: method={}", v.get("method").and_then(|m| m.as_str()).unwrap_or("(none)"));
                             }
-                            // Ignore events for now
                         }
                     }
                     Ok(Message::Close(_)) => break,
