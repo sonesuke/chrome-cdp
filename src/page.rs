@@ -35,9 +35,12 @@ impl CdpPage {
             window.chrome = { runtime: {} };
         "#;
         connection
-            .send_command("Page.addScriptToEvaluateOnNewDocument", json!({
-                "source": stealth_js
-            }))
+            .send_command(
+                "Page.addScriptToEvaluateOnNewDocument",
+                json!({
+                    "source": stealth_js
+                }),
+            )
             .await
             .map_err(|e| Error::Browser(format!("Failed to add stealth script: {}", e)))?;
 
