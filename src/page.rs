@@ -27,6 +27,20 @@ impl CdpPage {
             .await
             .map_err(|e| Error::Browser(format!("Failed to enable Runtime domain: {}", e)))?;
 
+        // Inject anti-detection script before any page loads
+        let stealth_js = r#"
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+            window.chrome = { runtime: {} };
+        "#;
+        connection
+            .send_command("Page.addScriptToEvaluateOnNewDocument", json!({
+                "source": stealth_js
+            }))
+            .await
+            .map_err(|e| Error::Browser(format!("Failed to add stealth script: {}", e)))?;
+
         Ok(Self { connection })
     }
 

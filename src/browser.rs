@@ -54,9 +54,10 @@ impl CdpBrowser {
         cmd.arg(format!("--user-data-dir={}", temp_dir.display()));
         cmd.arg("--password-store=basic"); // Prevent keychain prompts
         cmd.arg("--no-first-run"); // Skip first run wizards
+        cmd.arg("--window-size=1920,1080"); // Set default viewport size
 
         if headless {
-            cmd.arg("--headless");
+            cmd.arg("--headless=new");
         }
 
         for arg in args {
