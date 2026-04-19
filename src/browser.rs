@@ -46,11 +46,12 @@ impl CdpBrowser {
             });
 
         // Create a temporary user data directory with a unique ID
-        // First, clean up orphaned chrome-* temp directories from previous runs
-        Self::cleanup_orphaned_temp_dirs();
-
         let unique_id = uuid::Uuid::new_v4();
         let temp_dir = std::env::temp_dir().join(format!("chrome-{}", unique_id));
+
+        // Clean up orphaned chrome-* temp directories from previous runs
+        Self::cleanup_orphaned_temp_dirs();
+
         std::fs::create_dir_all(&temp_dir)?;
 
         let mut cmd = Command::new(&chrome_path);
@@ -167,23 +168,51 @@ impl CdpBrowser {
             Err(Error::Browser(err_msg))
         })
         .await
-        .map_err(|e| Error::Browser(format!("Task failed: {}", e)))??;
+        .map_err(|e| Error::Browser(format!("Task failed: {}", e)))?;
 
-        let _ws_url =
-            Self::get_ws_url_with_retry(discovered_port, 10, Duration::from_millis(500)).await?;
+        let discovered_port = match discovered_port {
+            Ok(p) => p,
+            Err(e) => {
+                // Clean up leaked process and temp dir on launch failure
+                if let Ok(mut proc) = process.lock() {
+                    let _ = proc.kill();
+                    let _ = proc.wait();
+                }
+                let _ = std::fs::remove_dir_all(&temp_dir);
+                return Err(e);
+            }
+        };
+
+        let _ws_url = Self::get_ws_url_with_retry(discovered_port, 10, Duration::from_millis(500))
+            .await
+            .map_err(|e| {
+                // Clean up on failure
+                if let Ok(mut proc) = process.lock() {
+                    let _ = proc.kill();
+                    let _ = proc.wait();
+                }
+                let _ = std::fs::remove_dir_all(&temp_dir);
+                e
+            })?;
 
         // Unwrap the Arc<Mutex<>> to get the process
         let process = match Arc::try_unwrap(process) {
             Ok(mutex) => mutex.into_inner().unwrap(),
             Err(_) => {
+                let _ = std::fs::remove_dir_all(&temp_dir);
                 return Err(Error::Browser(
                     "Failed to acquire process ownership".to_string(),
-                ))
+                ));
             }
         };
 
         // Verify WebSocket URL is accessible (discard the result)
-        Self::get_ws_url_with_retry(discovered_port, 10, Duration::from_millis(500)).await?;
+        Self::get_ws_url_with_retry(discovered_port, 10, Duration::from_millis(500))
+            .await
+            .map_err(|e| {
+                let _ = std::fs::remove_dir_all(&temp_dir);
+                e
+            })?;
 
         Ok(Self {
             process: Some(process),
@@ -296,15 +325,24 @@ impl CdpBrowser {
     }
 
     /// Remove orphaned chrome-* temp directories from previous runs
+    /// Only removes directories older than 60 seconds to avoid race conditions
+    /// with concurrently launching instances.
     fn cleanup_orphaned_temp_dirs() {
         let temp_dir = std::env::temp_dir();
+        let threshold = Duration::from_secs(60);
         if let Ok(entries) = std::fs::read_dir(&temp_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                     if name.starts_with("chrome-") && path.is_dir() {
-                        // Try to remove the directory; skip if still in use
-                        let _ = std::fs::remove_dir_all(&path);
+                        // Only remove old directories to avoid race with concurrent launches
+                        if let Ok(metadata) = entry.metadata() {
+                            if let Ok(modified) = metadata.modified() {
+                                if modified.elapsed().unwrap_or(Duration::ZERO) > threshold {
+                                    let _ = std::fs::remove_dir_all(&path);
+                                }
+                            }
+                        }
                     }
                 }
             }
