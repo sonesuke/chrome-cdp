@@ -319,6 +319,9 @@ impl Drop for CdpBrowser {
             let _ = process.wait(); // Prevent zombie processes
         }
 
+        // Brief wait for child processes (GPU, renderer) to release file handles
+        std::thread::sleep(std::time::Duration::from_millis(200));
+
         // Clean up temp user data directory
         let _ = std::fs::remove_dir_all(&self.user_data_dir);
     }
