@@ -46,11 +46,13 @@ impl CdpBrowser {
             });
 
         // Create a temporary user data directory with a unique ID
-        // First, clean up orphaned chrome-* temp directories from previous runs
-        Self::cleanup_orphaned_temp_dirs();
-
         let unique_id = uuid::Uuid::new_v4();
         let temp_dir = std::env::temp_dir().join(format!("chrome-{}", unique_id));
+
+        // Clean up orphaned chrome-* temp directories from previous runs
+        // (skip our own dir to avoid race with concurrent launches)
+        Self::cleanup_orphaned_temp_dirs(&unique_id);
+
         std::fs::create_dir_all(&temp_dir)?;
 
         let mut cmd = Command::new(&chrome_path);
@@ -296,14 +298,15 @@ impl CdpBrowser {
     }
 
     /// Remove orphaned chrome-* temp directories from previous runs
-    fn cleanup_orphaned_temp_dirs() {
+    fn cleanup_orphaned_temp_dirs(own_id: &uuid::Uuid) {
+        let own_prefix = format!("chrome-{}", own_id);
         let temp_dir = std::env::temp_dir();
         if let Ok(entries) = std::fs::read_dir(&temp_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    if name.starts_with("chrome-") && path.is_dir() {
-                        // Try to remove the directory; skip if still in use
+                    // Skip our own directory to avoid race with concurrent launches
+                    if name.starts_with("chrome-") && name != own_prefix && path.is_dir() {
                         let _ = std::fs::remove_dir_all(&path);
                     }
                 }
