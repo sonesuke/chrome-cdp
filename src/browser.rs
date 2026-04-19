@@ -185,14 +185,13 @@ impl CdpBrowser {
 
         let _ws_url = Self::get_ws_url_with_retry(discovered_port, 10, Duration::from_millis(500))
             .await
-            .map_err(|e| {
+            .inspect_err(|_| {
                 // Clean up on failure
                 if let Ok(mut proc) = process.lock() {
                     let _ = proc.kill();
                     let _ = proc.wait();
                 }
                 let _ = std::fs::remove_dir_all(&temp_dir);
-                e
             })?;
 
         // Unwrap the Arc<Mutex<>> to get the process
@@ -209,9 +208,8 @@ impl CdpBrowser {
         // Verify WebSocket URL is accessible (discard the result)
         Self::get_ws_url_with_retry(discovered_port, 10, Duration::from_millis(500))
             .await
-            .map_err(|e| {
+            .inspect_err(|_| {
                 let _ = std::fs::remove_dir_all(&temp_dir);
-                e
             })?;
 
         Ok(Self {
