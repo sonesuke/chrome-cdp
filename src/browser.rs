@@ -13,6 +13,7 @@ use tokio::time::sleep;
 pub struct CdpBrowser {
     process: Option<Child>,
     port: u16,
+    user_data_dir: PathBuf,
 }
 
 impl CdpBrowser {
@@ -45,6 +46,9 @@ impl CdpBrowser {
             });
 
         // Create a temporary user data directory with a unique ID
+        // First, clean up orphaned chrome-* temp directories from previous runs
+        Self::cleanup_orphaned_temp_dirs();
+
         let unique_id = uuid::Uuid::new_v4();
         let temp_dir = std::env::temp_dir().join(format!("chrome-{}", unique_id));
         std::fs::create_dir_all(&temp_dir)?;
@@ -55,6 +59,8 @@ impl CdpBrowser {
         cmd.arg("--password-store=basic"); // Prevent keychain prompts
         cmd.arg("--no-first-run"); // Skip first run wizards
         cmd.arg("--window-size=1920,1080"); // Set default viewport size
+        cmd.arg("--disable-dev-shm-usage"); // Use /tmp instead of /dev/shm (Docker compatibility)
+        cmd.arg("--no-zygote"); // No shared renderer process (multi-instance isolation)
 
         if headless {
             cmd.arg("--headless=new");
@@ -112,6 +118,7 @@ impl CdpBrowser {
 
         let stderr_path_for_error = stderr_file.clone();
         let process_for_error = process.clone();
+        let temp_dir_for_error = temp_dir.clone();
         // Wait for the port to be discovered
         let discovered_port = tokio::task::spawn_blocking(move || {
             for _ in 0..300 {
@@ -140,7 +147,7 @@ impl CdpBrowser {
                  User Data Dir: {:?}\n\
                  === Chrome stderr ===\n{}\n\
                  === End of stderr ===",
-                os_info, chrome_path, temp_dir, chrome_stderr
+                os_info, chrome_path, temp_dir_for_error, chrome_stderr
             );
 
             // Check process status
@@ -181,6 +188,7 @@ impl CdpBrowser {
         Ok(Self {
             process: Some(process),
             port: discovered_port,
+            user_data_dir: temp_dir,
         })
     }
 
@@ -286,13 +294,33 @@ impl CdpBrowser {
                 ))
             })
     }
+
+    /// Remove orphaned chrome-* temp directories from previous runs
+    fn cleanup_orphaned_temp_dirs() {
+        let temp_dir = std::env::temp_dir();
+        if let Ok(entries) = std::fs::read_dir(&temp_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name.starts_with("chrome-") && path.is_dir() {
+                        // Try to remove the directory; skip if still in use
+                        let _ = std::fs::remove_dir_all(&path);
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Drop for CdpBrowser {
     fn drop(&mut self) {
         if let Some(mut process) = self.process.take() {
             let _ = process.kill();
+            let _ = process.wait(); // Prevent zombie processes
         }
+
+        // Clean up temp user data directory
+        let _ = std::fs::remove_dir_all(&self.user_data_dir);
     }
 }
 
